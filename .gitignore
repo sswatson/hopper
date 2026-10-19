@@ -1,0 +1,17 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# Logs and stray local binaries
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

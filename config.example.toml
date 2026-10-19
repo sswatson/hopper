@@ -1,0 +1,24 @@
+# hopper config: copy to ~/.config/hopper/config.toml
+# (or .config/hopper/config.toml in a project directory, which is merged on top).
+
+# Profile for buckets that don't name their own. Defaults to the usual AWS
+# credential chain (AWS_PROFILE, then the [default] profile).
+# profile = "default"
+
+# Region used before a bucket's own region is detected (hopper finds each
+# bucket's region automatically on first use).
+# region = "us-east-1"
+
+# Also show whatever ListBuckets returns: true (default profile), false, or a
+# list of profiles to ask.
+discover = true
+
+# The buckets you actually use. ListBuckets only shows buckets owned by the
+# account you're signed in to, so list cross-account and shared buckets here.
+buckets = [
+  "my-team-bucket",
+  "s3://shared-drop/vendor/acme/",                           # opens at a prefix
+  { name = "other-account-bucket", profile = "legacy" },     # needs another profile's credentials
+  { name = "vendor-feed", profile = "legacy", prefix = "exports/", label = "Vendor exports" },
+  { name = "eu-data", region = "eu-west-1" },                # skip region detection
+]
