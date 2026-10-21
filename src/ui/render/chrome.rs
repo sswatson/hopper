@@ -144,6 +144,9 @@ pub(super) fn render_help(frame: &mut Frame, area: Rect, state: &AppState, theme
         help_text.push(Line::from(
             "  Enter        Edit object in $EDITOR (uploaded back only if changed)",
         ));
+        help_text.push(Line::from(
+            "  v            View object in a [[viewers]] program (downloaded to a temp file)",
+        ));
     }
     help_text.extend([
         Line::from("  ?            Toggle this help"),

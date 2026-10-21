@@ -6,6 +6,7 @@ mod preview;
 mod terminal;
 #[cfg(test)]
 mod tests;
+mod viewing;
 
 use crate::app::events::AppEvent;
 use crate::app::state::*;

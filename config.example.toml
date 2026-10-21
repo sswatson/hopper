@@ -22,3 +22,11 @@ buckets = [
   { name = "vendor-feed", profile = "legacy", prefix = "exports/", label = "Vendor exports" },
   { name = "eu-data", region = "eu-west-1" },                # skip region detection
 ]
+
+# Programs that open an object with `v`. The object is downloaded to a temp
+# file and the command runs with that path appended (no shell is involved).
+# The first viewer whose extensions match wins. Ctrl+C stops the viewer and
+# returns to hopper. Project configs add to this list, after the global one.
+[[viewers]]
+extensions = ["parquet", "csv", "tsv", "arrow", "feather", "ipc", "json", "ndjson", "jsonl", "sqlite", "sqlite3", "duckdb", "ddb"]
+command = ["tablescope"]

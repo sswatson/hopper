@@ -34,6 +34,9 @@ clap = { version = "4.5", features = ["derive"] }
 # Clipboard
 arboard = "3.6"
 
+# Signal disposition while a viewer runs in the foreground (see actions/viewing.rs)
+libc = "0.2"
+
 # Date/time
 chrono = "0.4"
 

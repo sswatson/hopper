@@ -590,6 +590,16 @@ pub(super) async fn poll_background_tasks_impl(state: &mut AppState) -> Result<(
                     state.set_status(format!("Open failed: {:#}", err));
                 }
             },
+            TaskResult::ViewReady(result) => match result {
+                Ok(request) => viewing::run_viewer(state, request).await?,
+                Err(err) => {
+                    state.running_operations = state.running_operations.saturating_sub(1);
+                    if state.running_operations == 0 {
+                        state.operation_progress = None;
+                    }
+                    state.set_status(format!("View failed: {:#}", err));
+                }
+            },
         }
     }
 

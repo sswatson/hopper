@@ -329,6 +329,7 @@ async fn handle_global_event(state: &mut AppState, event: AppEvent) -> Result<()
         AppEvent::CutSelection => operations::cut_selection(state),
         AppEvent::PasteSelection => operations::paste_selection(state),
         AppEvent::OpenInBrowser => operations::open_in_browser(state),
+        AppEvent::ViewObject => viewing::view_selected(state),
         AppEvent::FetchPrefixSize => preview::fetch_prefix_size(state),
         AppEvent::ToggleSelect => {
             if let Some(item) = state.selected_item().cloned() {

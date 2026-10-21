@@ -26,7 +26,19 @@ pub struct Config {
     /// profile. Empty disables discovery.
     pub discover: Vec<Option<String>>,
     pub buckets: Vec<BucketEntry>,
+    /// Programs that open downloaded objects, in config order; the first
+    /// viewer whose extensions match an object wins.
+    pub viewers: Vec<Viewer>,
     pub loaded_files: Vec<PathBuf>,
+}
+
+/// A program that opens a downloaded object (`v`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Viewer {
+    /// Lowercase, without the leading dot.
+    pub extensions: Vec<String>,
+    /// Program and its leading arguments. The local file path is appended.
+    pub command: Vec<String>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -37,6 +49,47 @@ struct RawConfig {
     discover: Option<RawDiscover>,
     #[serde(default)]
     buckets: Vec<RawBucket>,
+    #[serde(default)]
+    viewers: Vec<RawViewer>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawViewer {
+    extensions: Vec<String>,
+    command: Vec<String>,
+}
+
+impl RawViewer {
+    fn into_viewer(self, path: &Path) -> Result<Viewer> {
+        let extensions: Vec<String> = self
+            .extensions
+            .iter()
+            .map(|extension| {
+                extension
+                    .trim()
+                    .trim_start_matches('.')
+                    .to_ascii_lowercase()
+            })
+            .collect();
+        if extensions.is_empty() || extensions.iter().any(String::is_empty) {
+            return Err(anyhow!(
+                "viewer extensions must be non-empty in {}",
+                path.display()
+            ));
+        }
+        if self
+            .command
+            .first()
+            .is_none_or(|program| program.trim().is_empty())
+        {
+            return Err(anyhow!("viewer command is empty in {}", path.display()));
+        }
+        Ok(Viewer {
+            extensions,
+            command: self.command,
+        })
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -175,7 +228,18 @@ impl Config {
         for bucket in raw.buckets {
             self.add_bucket(bucket.into_entry(path)?);
         }
+        for viewer in raw.viewers {
+            self.viewers.push(viewer.into_viewer(path)?);
+        }
         Ok(())
+    }
+
+    /// The first viewer that handles `key`'s file extension, if any.
+    pub fn viewer_for(&self, key: &str) -> Option<&Viewer> {
+        let extension = Path::new(key).extension()?.to_str()?.to_ascii_lowercase();
+        self.viewers
+            .iter()
+            .find(|viewer| viewer.extensions.contains(&extension))
     }
 
     /// Adds a bucket unless an entry for the same bucket/profile/prefix exists.
@@ -409,6 +473,77 @@ buckets = [
         assert_eq!(config.buckets.len(), 5);
         assert_eq!(config.buckets[1].prefix, "vendor/acme/");
         assert_eq!(config.buckets[3].display_name(), "Vendor exports");
+        assert_eq!(config.viewers.len(), 1);
+        assert_eq!(config.viewers[0].command, vec!["tablescope"]);
+    }
+
+    #[test]
+    fn viewers_match_by_extension_first_wins_and_append_across_files() {
+        let global = temp_path("viewers-global");
+        let project = temp_path("viewers-project");
+        std::fs::write(
+            &global,
+            r#"
+[[viewers]]
+extensions = [".PARQUET", "csv"]
+command = ["tablescope"]
+"#,
+        )
+        .unwrap();
+        std::fs::write(
+            &project,
+            r#"
+[[viewers]]
+extensions = ["parquet", "db"]
+command = ["other-viewer", "--flag"]
+"#,
+        )
+        .unwrap();
+        let config = load_config_from_paths(&[global, project]).unwrap();
+
+        assert_eq!(config.viewers[0].extensions, vec!["parquet", "csv"]);
+        assert_eq!(
+            config.viewer_for("data/part-0.parquet").unwrap().command,
+            vec!["tablescope"]
+        );
+        assert_eq!(
+            config.viewer_for("exports/Report.CSV").unwrap().command,
+            vec!["tablescope"]
+        );
+        assert_eq!(
+            config.viewer_for("warehouse.db").unwrap().command,
+            vec!["other-viewer", "--flag"]
+        );
+        assert!(config.viewer_for("notes.txt").is_none());
+        assert!(config.viewer_for("no-extension").is_none());
+        assert!(config.viewer_for("dir.v2/file").is_none());
+    }
+
+    #[test]
+    fn viewer_without_command_or_extensions_is_rejected() {
+        let empty_command = temp_path("viewer-empty-command");
+        std::fs::write(
+            &empty_command,
+            "[[viewers]]\nextensions = [\"csv\"]\ncommand = []\n",
+        )
+        .unwrap();
+        assert!(load_config_from_paths(&[empty_command]).is_err());
+
+        let no_extensions = temp_path("viewer-no-extensions");
+        std::fs::write(
+            &no_extensions,
+            "[[viewers]]\nextensions = []\ncommand = [\"tablescope\"]\n",
+        )
+        .unwrap();
+        assert!(load_config_from_paths(&[no_extensions]).is_err());
+
+        let unknown_key = temp_path("viewer-unknown-key");
+        std::fs::write(
+            &unknown_key,
+            "[[viewers]]\nextension = [\"csv\"]\ncommand = [\"tablescope\"]\n",
+        )
+        .unwrap();
+        assert!(load_config_from_paths(&[unknown_key]).is_err());
     }
 
     #[test]

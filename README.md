@@ -42,7 +42,19 @@ buckets = [
 
 You can also manage the list from inside hopper. At the bucket list, `a` opens a form (bucket, profile, prefix, region, label) and appends the entry to the config file, keeping your comments and formatting. `d` removes the selected entries from the config; it never deletes buckets.
 
-A `.config/hopper/config.toml` in the current directory is merged on top of the global file (its buckets are appended).
+A `.config/hopper/config.toml` in the current directory is merged on top of the global file (its buckets and viewers are appended).
+
+### Viewers
+
+`v` on an object downloads it to a temp file and opens it in a program you configure, such as [tablescope](https://pypi.org/project/tablescope/) for parquet, CSV, or database files:
+
+```toml
+[[viewers]]
+extensions = ["parquet", "csv", "tsv", "sqlite", "duckdb"]
+command = ["tablescope"]
+```
+
+The local path is appended to `command`; no shell is involved, so use an argv list (for example `["uv", "run", "--project", "/path/to/project", "tablescope"]`). The first viewer whose extensions match wins. The viewer runs in the foreground with hopper's screen suspended, and Ctrl+C stops it and returns you to hopper. Temp files are removed when hopper exits.
 
 ## Usage
 
@@ -71,6 +83,7 @@ hopper --demo                            # mock data, no AWS needed
 | `Space` | Mark item (marked items are the targets of `D`, `d`, `x`) |
 | `y` | Copy `s3://` URI |
 | `o` | Open in the AWS console |
+| `v` | View an object in a configured viewer (see [Viewers](#viewers)) |
 | `D` / `U` | Download selected / upload a local file or directory here |
 | `a` | New object (opens `$EDITOR`) or folder (name ending in `/`); at the bucket list: add bucket to config |
 | `r` | Rename object or prefix |
@@ -88,7 +101,7 @@ hopper --demo                            # mock data, no AWS needed
 - Single-request uploads and server-side copies are limited to 5 GB per object (no multipart yet).
 - Moves are copy-then-delete; a source is deleted only if its copy succeeded. Cross-account moves use the destination bucket's credentials, so those credentials must be able to read the source.
 - Objects in `GLACIER`/`DEEP_ARCHIVE` show metadata but can't be previewed or opened until restored.
-- Objects larger than 50 MB aren't opened in the editor. Use `D` instead.
+- Objects larger than 50 MB aren't opened in the editor. Use `D` instead. Viewers have no size limit, so large files take disk space in the temp directory until hopper exits.
 
 ## Development
 

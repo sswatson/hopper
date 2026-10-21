@@ -34,6 +34,7 @@ pub enum AppEvent {
     CutSelection,
     PasteSelection,
     OpenInBrowser,
+    ViewObject,
     FetchPrefixSize,
     ToggleDeleteDangerMode,
 
@@ -206,6 +207,7 @@ impl AppEvent {
                     (KeyCode::Char('x'), KeyModifiers::NONE) => Some(AppEvent::CutSelection),
                     (KeyCode::Char('p'), KeyModifiers::NONE) => Some(AppEvent::PasteSelection),
                     (KeyCode::Char('o'), KeyModifiers::NONE) => Some(AppEvent::OpenInBrowser),
+                    (KeyCode::Char('v'), KeyModifiers::NONE) => Some(AppEvent::ViewObject),
 
                     _ => None,
                 }

@@ -1,5 +1,5 @@
 use super::*;
-use crate::app::config::{Config, append_bucket_to_file, load_config};
+use crate::app::config::{Config, Viewer, append_bucket_to_file, load_config};
 use crate::client::mock::MockStore;
 use std::path::PathBuf;
 use std::time::Duration;
@@ -550,4 +550,38 @@ async fn refresh_drops_deeper_pane_whose_prefix_vanished() {
     press(&mut state, AppEvent::Refresh).await;
     assert_eq!(active_names(&state), vec!["2024/"]);
     assert_eq!(state.navigation.levels_len(), 3);
+}
+
+#[tokio::test]
+async fn view_downloads_object_and_runs_the_matching_viewer() {
+    let (mut config, path) = config_with(&[], "view");
+    config.viewers.push(Viewer {
+        extensions: vec!["csv".to_string()],
+        command: vec!["true".to_string()],
+    });
+    let mut state = new_state(config, Some(path)).await;
+
+    open(&mut state, "alpha").await;
+    select_named(&mut state, "readme.txt");
+    press(&mut state, AppEvent::ViewObject).await;
+    assert_eq!(
+        state.status_message.as_deref(),
+        Some("No viewer for .txt; add a [[viewers]] entry to your config")
+    );
+
+    select_named(&mut state, "data/");
+    press(&mut state, AppEvent::ViewObject).await;
+    assert_eq!(
+        state.status_message.as_deref(),
+        Some("Select an object to view")
+    );
+
+    open(&mut state, "data/").await;
+    open(&mut state, "2024/").await;
+    select_named(&mut state, "jan.csv");
+    press(&mut state, AppEvent::ViewObject).await;
+    assert_eq!(
+        state.status_message.as_deref(),
+        Some("Closed s3://alpha/data/2024/jan.csv")
+    );
 }

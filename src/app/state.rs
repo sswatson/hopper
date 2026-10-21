@@ -138,6 +138,8 @@ pub enum TaskResult {
     },
     /// An object was downloaded for editing; the event loop opens the editor.
     EditReady(Result<EditRequest>),
+    /// An object was downloaded for a viewer; the event loop runs it.
+    ViewReady(Result<ViewRequest>),
 }
 
 /// A local copy of an object (or a new object) to open in `$EDITOR`.
@@ -148,6 +150,16 @@ pub struct EditRequest {
     pub path: PathBuf,
     /// Contents before editing; `None` for a new object.
     pub original: Option<Vec<u8>>,
+}
+
+/// A local copy of an object to open in a configured viewer.
+#[derive(Debug, Clone)]
+pub struct ViewRequest {
+    pub bucket: Arc<BucketEntry>,
+    pub key: String,
+    pub path: PathBuf,
+    /// The viewer's program and leading arguments; `path` is appended.
+    pub command: Vec<String>,
 }
 
 pub struct ListState {
